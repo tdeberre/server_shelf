@@ -1,0 +1,42 @@
+{
+    "user1": {
+        "deck1": [
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "soin",
+            "soin",
+            "taper",
+            "soin",
+            "soin"
+        ],
+        "deck2": [
+            "soin",
+            "soin",
+            "soin",
+            "soin",
+            "soin",
+            "soin",
+            "soin",
+            "soin",
+            "soin",
+            "soin"
+        ]
+    },
+    "user2": {
+        "deck1": [
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "taper",
+            "taper"
+        ]
+    }
+}

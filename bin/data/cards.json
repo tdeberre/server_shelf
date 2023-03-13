@@ -1,0 +1,27 @@
+{
+    "taper": {
+        "effect": "tape 5",
+        "cost":"2",
+        "func": "Damage(2);"
+    },
+    "soin": {
+        "effect": "soigne 1",
+        "cost":"2",
+        "func": "Heal(1);"
+    },
+    "protege": {
+        "effect": "protège 3 fois de 1",
+        "cost":"3",
+        "func": "Armor(reduction:1,times:3);"
+    },
+    "autre": {
+        "effect": "tape 1",
+        "cost":"1",
+        "func": "Damage(1);"
+    },
+    "carte5": {
+        "effect": "effet 5",
+        "cost":"5",
+        "func": ""
+    }
+}
