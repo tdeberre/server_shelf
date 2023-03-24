@@ -2,7 +2,10 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:test/test.dart';
+
 import 'game.dart';
+import 'api.dart';
 
 Player? _pending;
 
@@ -20,32 +23,29 @@ class ClientManager {
   static void handleConnection(Socket client) async {
     client.listen(
       (Uint8List data) async {
-        final clientRequest = String.fromCharCodes(data);
+        final clientRequest = jsonDecode(String.fromCharCodes(data));
         print(clientRequest);
         try {
-          print(jsonDecode(clientRequest)["name"]);
+          final token = tokens.entries
+              .firstWhere((e) => e.value["token"] == clientRequest["token"]);
           Player player = Player(
-              player: jsonDecode(clientRequest)["name"],
+              player: token.key,
               socket: client,
-              deck: jsonDecode(clientRequest)['deck'].cast<String>());
-          if (_pending == null) {
-            _pending = player;
-            print("${_pending?.player} pending");
-          } else {
-            _pending!.enemy = player.player;
-            player.enemy = _pending!.player;
-            players.addAll([player, _pending!]);
-            _pending!.sendNewState();
-            _pending = null;
+              deck: jsonDecode(clientRequest)['deck']);
+          Player? enemy;
+          try {
+            enemy = players.firstWhere((e) => e.enemy.isEmpty);
+          } catch (e) {
+            enemy = null;
+          }
+          if (enemy != null) {
+            player.enemy = enemy.player;
+            enemy.enemy = player.player;
             player.sendNewState();
           }
-        } catch (e) {}
-
-        if (clientRequest == "draw") {
-          Player thisPlayer = players.firstWhere(
-            (player) => player.socket == client,
-          );
-          thisPlayer.draw();
+          players.add(player);
+        } catch (e) {
+          client.close();
         }
       },
       onError: (error) {
@@ -58,7 +58,6 @@ class ClientManager {
     );
   }
 
-  /// clientCreds look like {"name" : name , "pwd" : password}
   static bool connectionCheck(Map clientCreds, Socket thisSocket) {
     final data = File("bin/data/users.json").readAsStringSync();
     final user = jsonDecode(data)[clientCreds['name']];

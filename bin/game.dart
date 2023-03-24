@@ -2,6 +2,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:server/play.dart';
+
 class Player {
   Player(
       {required this.player,
@@ -15,6 +17,7 @@ class Player {
 
   late final String enemy;
   get enemyState => players.firstWhere((e) => e.player == enemy)._state;
+  //ignore:prefer_final_fields
   Map<String, dynamic> _state = {
     "hp": 100,
     "hand": [],
@@ -37,7 +40,7 @@ class Player {
   }
 
   void draw() {
-    if (state['hand'].length < 6) {
+    if (state["hand"].length < 6) {
       if (state["deck"].isNotEmpty) {
         final card = state["deck"][Random().nextInt(state["deck"].length)];
         state["deck"].remove(card);
@@ -47,6 +50,16 @@ class Player {
       }
     }
     sendNewState();
+  }
+
+  void play(String card) async {
+    if (state["hand"].contains(card)) {
+      final data = File("bin/data/cards.json").readAsStringSync();
+      final cards = jsonDecode(data);
+      final effect = cards[card]["func"];
+      _state = await gameEval(effect, player, _state);
+      sendNewState();
+    }
   }
 
   sendNewState() {
