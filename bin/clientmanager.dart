@@ -2,12 +2,8 @@ import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:test/test.dart';
-
 import 'game.dart';
 import 'api.dart';
-
-Player? _pending;
 
 class ClientManager {
   static init() async {
@@ -15,6 +11,7 @@ class ClientManager {
     final port = int.parse(Platform.environment['PORT'] ?? '56562');
     final server = await ServerSocket.bind(ip, port);
     server.listen((client) {
+      print("client?");
       handleConnection(client);
     });
     print("ClientManager listening on port ${server.port}");
@@ -27,24 +24,30 @@ class ClientManager {
         print(clientRequest);
         try {
           final token = tokens.entries
-              .firstWhere((e) => e.value["token"] == clientRequest["token"]);
+              .firstWhere((e) => e.value["token"] == clientRequest["token"])
+              .key;
           Player player = Player(
-              player: token.key,
+              player: token,
               socket: client,
               deck: jsonDecode(clientRequest)['deck']);
           Player? enemy;
           try {
             enemy = players.firstWhere((e) => e.enemy.isEmpty);
+
+            print("enemy found"); //
           } catch (e) {
+            print("no enemy found"); //
             enemy = null;
           }
           if (enemy != null) {
             player.enemy = enemy.player;
             enemy.enemy = player.player;
+            print("sending state"); //
             player.sendNewState();
           }
           players.add(player);
         } catch (e) {
+          print(e);
           client.close();
         }
       },

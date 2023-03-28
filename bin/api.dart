@@ -9,6 +9,17 @@ import 'package:shelf_router/shelf_router.dart';
 
 import 'game.dart';
 
+class Api {
+  static void init() async {
+    _tokenCleaner();
+    final ip = InternetAddress.anyIPv4;
+    final port = int.parse(Platform.environment['PORT'] ?? '56561');
+    final handler = Pipeline().addMiddleware(logRequests()).addHandler(_router);
+    final server = await serve(handler, ip, port);
+    print('API listening on port ${server.port}');
+  }
+}
+
 String _getDataFrom(String fileName) =>
     File("bin/data/$fileName").readAsStringSync();
 
@@ -20,16 +31,17 @@ String _getRandString(int len) {
 
 final _router = Router()
   //get
-  ..get("/cards", _cardsHandler)
-  ..get("/decks/<user>", _decksFromUserHandler)
+  ..get("/api/cards", _cardsHandler)
+  ..get("/api/decks/<user>", _decksFromUserHandler)
   //post
-  ..post("/token", _tokenHandler)
-  ..post("/decks/<user>", _decksToUserHandler)
-  ..post("/draw", _drawHandler)
-  ..post("/play/<card>", _playHandler)
+  ..post("/api/token", _tokenHandler)
+  ..post("/api/signup", _signupHandler)
+  ..post("/api/decks/<user>", _decksToUserHandler) //TODO
+  ..post("/api/draw", _drawHandler)
+  ..post("/api/play/<card>", _playHandler)
   //debug
-  ..get("/test", _test)
-  ..get("/close", _closeHandler);
+  ..get("/api/test", _test)
+  ..get("/api/close", _closeHandler);
 
 //get
 Response _cardsHandler(Request req) {
@@ -55,16 +67,15 @@ Future<Response> _tokenHandler(Request req) async {
   } catch (e) {
     return Response.badRequest(body: "Server can't read data");
   }
-  final user = jsonDecode(_getDataFrom("users.json"))[creds["username"]];
+  final user = jsonDecode(_getDataFrom("users.json"))[creds["email"]];
   if (user.toString() == creds.toString()) {
     final token = _getRandString(255);
     tokens.addAll({
-      creds["username"]: {
+      creds["email"]: {
         "token": token,
         "expiration": DateTime.now().add(Duration(minutes: 15)),
       }
     });
-    print(tokens);
     return Response(201, body: jsonEncode(token));
   }
   return Response.unauthorized("Wrong credentials");
@@ -77,6 +88,18 @@ void _tokenCleaner() async {
     tokens.removeWhere(
         (key, value) => value["expiration"].isBefore(DateTime.now()));
   });
+}
+
+Future<Response> _signupHandler(req) async {
+  final body = await req.readAsString();
+  final pending = File("bin/data/pending.json");
+  Map requestMap = jsonDecode(body);
+  Map pendingMap = jsonDecode(pending.readAsStringSync());
+  pending.writeAsString(jsonEncode({
+    ...pendingMap,
+    ...{requestMap["email"]: requestMap}
+  }));
+  return Response.ok("ok");
 }
 
 Future<Response> _decksToUserHandler(Request req, String user) async {
@@ -133,15 +156,4 @@ Response _closeHandler(req) {
   exit(0);
   //ignore:dead_code
   return Response.ok("closed");
-}
-
-class Api {
-  static void init() async {
-    _tokenCleaner();
-    final ip = InternetAddress.anyIPv4;
-    final port = int.parse(Platform.environment['PORT'] ?? '56561');
-    final handler = Pipeline().addMiddleware(logRequests()).addHandler(_router);
-    final server = await serve(handler, ip, port);
-    print('API listening on port ${server.port}');
-  }
 }

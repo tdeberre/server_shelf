@@ -65,10 +65,12 @@ class Player {
   sendNewState() {
     print(jsonEncode(state));
     socket.write(jsonEncode(state));
+    print("state");
     players
         .firstWhere((e) => e.player == enemy)
         .socket
         .write(jsonEncode(enemyState));
+    print("enemy state");
   }
 }
 
