@@ -11,7 +11,6 @@ class ClientManager {
     final port = int.parse(Platform.environment['PORT'] ?? '56562');
     final server = await ServerSocket.bind(ip, port);
     server.listen((client) {
-      print("client?");
       handleConnection(client);
     });
     print("ClientManager listening on port ${server.port}");
@@ -21,31 +20,28 @@ class ClientManager {
     client.listen(
       (Uint8List data) async {
         final clientRequest = jsonDecode(String.fromCharCodes(data));
-        print(clientRequest);
         try {
-          final token = tokens.entries
+          final String username = tokens.entries
               .firstWhere((e) => e.value["token"] == clientRequest["token"])
               .key;
-          Player player = Player(
-              player: token,
-              socket: client,
-              deck: jsonDecode(clientRequest)['deck']);
+          List<String> deck = clientRequest['deck'].cast<String>();
+          Player player = Player(player: username, socket: client, deck: deck);
           Player? enemy;
           try {
-            enemy = players.firstWhere((e) => e.enemy.isEmpty);
-
-            print("enemy found"); //
+            enemy = players.firstWhere((e) => e.enemy == null);
           } catch (e) {
-            print("no enemy found"); //
-            enemy = null;
+            player.enemy = null;
+            print("enemy: $e");
           }
           if (enemy != null) {
             player.enemy = enemy.player;
             enemy.enemy = player.player;
-            print("sending state"); //
+          }
+          players.removeWhere((e) => e.player == player.player);
+          players.add(player);
+          if (enemy != null) {
             player.sendNewState();
           }
-          players.add(player);
         } catch (e) {
           print(e);
           client.close();

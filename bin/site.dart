@@ -19,6 +19,7 @@ getTemplate(String name) {
 }
 
 final _router = Router()
+  ..get("/site/mail", _notFoundHandler)
   ..get("/site/<page>", _homeHandler)
   ..get("/<page>", _notFoundHandler);
 

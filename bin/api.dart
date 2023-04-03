@@ -8,6 +8,7 @@ import 'package:shelf/shelf_io.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 import 'game.dart';
+import 'mailer.dart';
 
 class Api {
   static void init() async {
@@ -35,7 +36,8 @@ final _router = Router()
   ..get("/api/decks/<user>", _decksFromUserHandler)
   //post
   ..post("/api/token", _tokenHandler)
-  ..post("/api/signup", _signupHandler)
+  ..post("/api/register", _registerHandler)
+  ..post("/api/validate", _validateHandler)
   ..post("/api/decks/<user>", _decksToUserHandler) //TODO
   ..post("/api/draw", _drawHandler)
   ..post("/api/play/<card>", _playHandler)
@@ -90,16 +92,47 @@ void _tokenCleaner() async {
   });
 }
 
-Future<Response> _signupHandler(req) async {
+Future<Response> _registerHandler(req) async {
   final body = await req.readAsString();
   final pending = File("bin/data/pending.json");
   Map requestMap = jsonDecode(body);
   Map pendingMap = jsonDecode(pending.readAsStringSync());
+  final key = _getRandString(255);
   pending.writeAsString(jsonEncode({
     ...pendingMap,
-    ...{requestMap["email"]: requestMap}
+    ...{
+      requestMap["email"]: {
+        ...requestMap,
+        ...{"key": key}
+      }
+    }
   }));
-  return Response.ok("ok");
+  sendMail("deberretheo@gmail.com", key);
+  return Response(201, body: "ok");
+}
+
+Future<Response> _validateHandler(req) async {
+  final body = await req.readAsString();
+  final pending = File("bin/data/pending.json");
+  final requestMap = jsonDecode(body);
+  Map pendingMap = jsonDecode(pending.readAsStringSync());
+  final user = requestMap.entries.first.key;
+  final key = requestMap.entries.first.value;
+
+  Map<String, dynamic> validatedUser = pendingMap[user];
+  if (validatedUser["key"] == key) {
+    validatedUser.remove("key");
+    final users = File("bin/data/users.json");
+    Map usersMap = jsonDecode(users.readAsStringSync());
+    usersMap.addAll(validatedUser);
+    users.writeAsStringSync(jsonEncode(usersMap));
+    pendingMap.remove(validatedUser["email"]);
+    pending
+        .writeAsStringSync(pendingMap.isEmpty ? "{}" : jsonEncode(pendingMap));
+  } else {
+    return Response.badRequest(body: "cant validate");
+  }
+  return Response(201, body: "ok");
 }
 
 Future<Response> _decksToUserHandler(Request req, String user) async {
@@ -123,10 +156,16 @@ Future<Response> _drawHandler(Request req, String card) async {
   if (body.isEmpty) {
     return Response.badRequest(body: "body is empty");
   }
+  if (jsonDecode(body).contain("token") == false) {
+    return Response.badRequest(body: "token not provided");
+  }
   final token = jsonDecode(body)["token"];
-  final user = tokens.entries.where((e) => (e.value["token"] == token &&
-      e.value["expiration"].isAfter(DateTime.now())));
-  final player = players.firstWhere((e) => e.player == user.first.key);
+  final user = tokens.entries
+      .where((e) => (e.value["token"] == token &&
+          e.value["expiration"].isAfter(DateTime.now())))
+      .first
+      .key;
+  final player = players.firstWhere((e) => e.player == user);
   player.draw();
   return Response(201);
 }

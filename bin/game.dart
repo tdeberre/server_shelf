@@ -15,7 +15,7 @@ class Player {
   final String player;
   final Socket socket;
 
-  late final String enemy;
+  late String? enemy;
   get enemyState => players.firstWhere((e) => e.player == enemy)._state;
   //ignore:prefer_final_fields
   Map<String, dynamic> _state = {
@@ -28,14 +28,14 @@ class Player {
 
   Map<String, dynamic> get state {
     return {
-      ..._state,
       ...{
         "hpEnemy": enemyState["hp"],
         "handEnemy": enemyState["hand"].length,
         "deckEnemy": enemyState["deck"].length,
         "heatEnemy": enemyState["heat"],
         "triggersEnemy": enemyState["triggers"]
-      }
+      },
+      ..._state
     };
   }
 
@@ -63,14 +63,10 @@ class Player {
   }
 
   sendNewState() {
-    print(jsonEncode(state));
+    print("sending state : $state");
     socket.write(jsonEncode(state));
-    print("state");
-    players
-        .firstWhere((e) => e.player == enemy)
-        .socket
-        .write(jsonEncode(enemyState));
-    print("enemy state");
+    final enemyPlayer = players.firstWhere((e) => e.player == enemy);
+    enemyPlayer.socket.write(jsonEncode(enemyPlayer.state));
   }
 }
 
