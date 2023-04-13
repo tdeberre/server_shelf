@@ -39,6 +39,22 @@ class Player {
     };
   }
 
+  set state(Map<dynamic, dynamic> map) {
+    map.forEach((key, value) {
+      _state.containsKey(key) ? _state[key] == value : null;
+    });
+    _state.forEach((key, value) {
+      map.remove(key);
+    });
+    map.forEach((key, value) {
+      key != "handEnemy" && key != "deckEnemy"
+          ? players
+              .firstWhere((e) => e.player == enemy)
+              ._state[key.substring(0, key.length - 5)] = value
+          : null;
+    });
+  }
+
   void draw() {
     if (state["hand"].length < 6) {
       if (state["deck"].isNotEmpty) {
@@ -52,17 +68,18 @@ class Player {
     sendNewState();
   }
 
-  void play(String card) async {
+  Future<void> play(String card) async {
     if (state["hand"].contains(card)) {
       final data = File("bin/data/cards.json").readAsStringSync();
       final cards = jsonDecode(data);
       final effect = cards[card]["func"];
-      _state = await gameEval(effect, player, _state);
+      state = await gameEval(effect, player, state);
+      _state["hand"].remove(card);
       sendNewState();
     }
   }
 
-  sendNewState() {
+  void sendNewState() {
     print("sending state : $state");
     socket.write(jsonEncode(state));
     final enemyPlayer = players.firstWhere((e) => e.player == enemy);

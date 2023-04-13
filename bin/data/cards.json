@@ -2,7 +2,7 @@
     "taper": {
         "effect": "tape 5",
         "cost":"2",
-        "func": "Damage(2);"
+        "func": "Damage(5);"
     },
     "soin": {
         "effect": "soigne 1",
@@ -12,7 +12,7 @@
     "protege": {
         "effect": "protège 3 fois de 1",
         "cost":"3",
-        "func": "Armor(reduction:1,times:3);"
+        "func": "Armor(reduction:1,times:5);"
     },
     "autre": {
         "effect": "tape 1",

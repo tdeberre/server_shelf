@@ -37,10 +37,9 @@ final _router = Router()
   //post
   ..post("/api/token", _tokenHandler)
   ..post("/api/register", _registerHandler)
-  ..post("/api/validate", _validateHandler)
   ..post("/api/decks/<user>", _decksToUserHandler) //TODO
   ..post("/api/draw", _drawHandler)
-  ..post("/api/play/<card>", _playHandler)
+  ..post("/api/play", _playHandler)
   //debug
   ..get("/api/test", _test)
   ..get("/api/close", _closeHandler);
@@ -83,6 +82,7 @@ Future<Response> _tokenHandler(Request req) async {
   return Response.unauthorized("Wrong credentials");
 }
 
+///contain every token created in the last 15min
 Map<String, dynamic> tokens = {};
 
 void _tokenCleaner() async {
@@ -111,30 +111,6 @@ Future<Response> _registerHandler(req) async {
   return Response(201, body: "ok");
 }
 
-Future<Response> _validateHandler(req) async {
-  final body = await req.readAsString();
-  final pending = File("bin/data/pending.json");
-  final requestMap = jsonDecode(body);
-  Map pendingMap = jsonDecode(pending.readAsStringSync());
-  final user = requestMap.entries.first.key;
-  final key = requestMap.entries.first.value;
-
-  Map<String, dynamic> validatedUser = pendingMap[user];
-  if (validatedUser["key"] == key) {
-    validatedUser.remove("key");
-    final users = File("bin/data/users.json");
-    Map usersMap = jsonDecode(users.readAsStringSync());
-    usersMap.addAll(validatedUser);
-    users.writeAsStringSync(jsonEncode(usersMap));
-    pendingMap.remove(validatedUser["email"]);
-    pending
-        .writeAsStringSync(pendingMap.isEmpty ? "{}" : jsonEncode(pendingMap));
-  } else {
-    return Response.badRequest(body: "cant validate");
-  }
-  return Response(201, body: "ok");
-}
-
 Future<Response> _decksToUserHandler(Request req, String user) async {
   final body = await req.readAsString();
   final data = _getDataFrom("decks.json");
@@ -151,38 +127,45 @@ Future<Response> _decksToUserHandler(Request req, String user) async {
   }
 }
 
-Future<Response> _drawHandler(Request req, String card) async {
+Future<Response> _drawHandler(Request req) async {
   final body = await req.readAsString();
   if (body.isEmpty) {
     return Response.badRequest(body: "body is empty");
   }
-  if (jsonDecode(body).contain("token") == false) {
+  if (!jsonDecode(body).containsKey("token")) {
     return Response.badRequest(body: "token not provided");
   }
   final token = jsonDecode(body)["token"];
-  final user = tokens.entries
-      .where((e) => (e.value["token"] == token &&
-          e.value["expiration"].isAfter(DateTime.now())))
-      .first
-      .key;
+  if (!(tokens.values.any(
+      (e) => e["token"] == token && e["expiration"].isAfter(DateTime.now())))) {
+    return Response.forbidden('auth error');
+  }
+  final user =
+      tokens.entries.firstWhere((e) => (e.value["token"] == token)).key;
   final player = players.firstWhere((e) => e.player == user);
   player.draw();
   return Response(201);
 }
 
-Future<Response> _playHandler(req, String card) async {
+Future<Response> _playHandler(Request req) async {
   final body = await req.readAsString();
   if (body.isEmpty) {
     return Response.badRequest(body: "body is empty");
   }
+  if (!jsonDecode(body).containsKey("token")) {
+    return Response.badRequest(body: "token not provided");
+  }
   final token = jsonDecode(body)["token"];
-  final user = tokens.entries.where((e) => (e.value["token"] == token &&
-      e.value["expiration"].isAfter(DateTime.now())));
-  if (user.isEmpty) {
+  if (!(tokens.values.any(
+    (e) => e["token"] == token && e["expiration"].isAfter(DateTime.now()),
+  ))) {
     return Response.forbidden('auth error');
   }
-  final player = players.firstWhere((e) => e.player == user.first.key);
-  player.play(card);
+  final user =
+      tokens.entries.firstWhere((e) => (e.value["token"] == token)).key;
+  final player = players.firstWhere((e) => e.player == user);
+  final card = jsonDecode(body)["card"];
+  await player.play(card);
   return Response(201);
 }
 

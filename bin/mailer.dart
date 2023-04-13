@@ -4,22 +4,14 @@ import 'smtp.dart';
 import 'dart:io';
 
 Future sendMail(String recipient, String key) async {
+  final file = File("bin/template/private/mail.html").readAsStringSync();
+  final splited = file.split("{here}");
+  String text = "${splited[0]}$recipient/$key${splited[1]}";
   final message = Message()
     ..from = Address("authentication@no-repply.com")
     ..recipients = [recipient]
     ..subject = "validate your email"
-    ..text = '''
-    ${File("bin/template/mail.html").readAsStringSync()}
-        
-    <script type="text/javascript">
-      function script(){
-        fetch("http://localhost/api/validate/", {
-        method: "POST",
-        body: "{'$recipient':'$key'}"
-        }).then(open("http://localhost/site/home"));
-      }
-    </script>
-    ''';
+    ..text = text;
 
   final smtpServer = SmtpServer(
     'smtp-relay.sendinblue.com',

@@ -5,24 +5,20 @@ late Map game;
 abstract class Effect {
   abstract final Function effect;
   void _activeTriggers() {
+    //remove depleted triggers
+    triggers
+        .removeWhere((trigger) => trigger.duration.isBefore(DateTime.now()));
     triggers
         //only keep effects that trigger on this type
         .where((trigger) => trigger.on == runtimeType)
         //then trigger they effects
         .forEach((trigger) => trigger.effect(this));
-    triggers.removeWhere((trigger) {
-      try {
-        //ignore:undefined_getter
-        return trigger.times == 0 ? true : false;
-      } catch (e) {
-        return false;
-      }
-    });
   }
 }
 
 abstract class Trigger extends Effect {
   abstract final Type on;
+  abstract DateTime duration;
 }
 
 //effects
@@ -37,8 +33,8 @@ class Heal extends Effect {
 
   @override
   Function get effect => (int amount) {
-        int i = game[player]!["hp"];
-        game[player]!["hp"] = i + amount;
+        int i = game["hp"];
+        game["hp"] = i + amount;
       };
 }
 
@@ -52,18 +48,20 @@ class Damage extends Effect {
 
   @override
   Function get effect => (int amount) {
-        int i = game[player]!["hp"];
-        game[player]!["hp"] = i - amount;
+        int i = game["hpEnemy"];
+        game["hpEnemy"] = i - amount;
       };
 }
 
 //triggers
 
 class Armor extends Trigger {
-  Armor({required this.reduction, required this.times});
+  Armor({required this.reduction, int? duration})
+      : duration = DateTime.now().add(Duration(seconds: duration ?? 9999));
 
   int reduction;
-  int times;
+  @override
+  DateTime duration;
 
   @override
   Type get on => Damage;

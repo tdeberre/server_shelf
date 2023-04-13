@@ -1,10 +1,1 @@
-{
-    "user@1": {
-        "email": "user@1",
-        "password": "pwd1"
-    },
-    "user@2": {
-        "email": "user@2",
-        "password": "pwd2"
-    }
-}
+{"user@1":{"email":"user@1","password":"pwd1"},"user@2":{"email":"user@2","password":"pwd2"},"deberretheo@gmail.com":{"email":"deberretheo@gmail.com","password":"test"}}
